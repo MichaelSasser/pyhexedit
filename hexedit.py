@@ -33,13 +33,14 @@ def main(*args, **kwargs):
     parser: argparse.ArgumentParser = argparse.ArgumentParser(prog='pyhexedit', description=__description__)
     parser.add_argument("input", help="The input file.", type=str)
     parser.add_argument("-o", "--output", help="The output file.", type=str, default=None)
-    parser.add_argument("-s", "--start", help="start", default=None)
-    parser.add_argument("-e", "--end", help="end", default=None)
+    parser.add_argument("-b", "--begin", help="start", default=0, type=int)
+    parser.add_argument("-e", "--end", help="end", default=(-1), type=int)
     parser.add_argument("-r", "--raw", help="raw-print", action="store_true")
     parser.add_argument("-l", "--lines", help="lines to pprint before next headline", type=int, default=16)
-    # parser.add_argument("-f", "--force", help="Overwrites the output file.", action="store_true")
+    parser.add_argument("-s", "--search", help="search", type=str, default=None)
+    parser.add_argument("-a", "--all", help="all", action="store_true")
     parser.add_argument("-E", "--edit", help="Safe edit.", action="store_true")
-    parser.add_argument("-b", "--bytes", help="bytes per line", type=int, default=16)
+    parser.add_argument("-B", "--bytes", help="bytes per line", type=int, default=16)
     parser.add_argument("--bigfile-mode", help="Enables bigfile mode", action="store_true")
     parser.add_argument("--no_auto_bigfile-mode", help="Disables auto bigfile mode", action="store_false")
 
@@ -55,11 +56,21 @@ def main(*args, **kwargs):
     # print(bytes(he))
     # he[20] = "Hello World"
     # print(bytes(he))
-    # print("Search:", he.find_all("Test", 0, 0xE0))
+    # print("Search:", he.find_all("Test", 0))
+
+    if args.search:
+        if args.all:
+            found = he.find_all(args.search, args.begin, args.end, not args.raw)
+        else:
+            found = he.find(args.search, args.begin, args.end, not args.raw)
+        if args.raw:
+            print(found)
+        return
+
+    if not args.raw:  # Printing should be the last.
+        he.pprint(args.begin, args.end, args.lines)
 
 
-    if not args.raw:
-        he.pprint(args.start, args.end, args.lines)
 
 
 if __name__ == '__main__':

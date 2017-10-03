@@ -1,4 +1,4 @@
-pyhexedit - The "Python HexEditor" package
-==========================================
+pyhexedit - The Python Hex Editor
+=================================
 
 ToDo...

@@ -63,28 +63,48 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
     def save(self):
         self.handler.save()
 
-    def find(self, value: [str, bytes], start: int = 0, stop: int = -1) -> [int, None]:
-        return self.handler.find(value, start, stop)
+    def find(self, value: [str, bytes], begin: int = 0, end: int = -1, pprint: bool = False) -> [int, None]:
+        found: int = self.handler.find(value, begin, end)
+        if pprint:
+            self.pprint_around(found)
+        return found
 
-    def find_all(self, value: [str, bytes], start: int = 0, stop: int = -1) -> tuple:
-        eof: int = stop if stop != -1 else self.__len__()
+    def find_all(self, value: [str, bytes], begin: int = 0, end: int = -1, pprint: bool = False) -> tuple:
+        eof: int = end if end != -1 else self.__len__()
         found: list = []
-        start_next: int = start
+        start_next: int = begin
         while True:
             if start_next > eof:
                 break
-            hit: int = self.find(value, start_next, stop)
+            hit: int = self.find(value, start_next, end, pprint)
             if hit is None:
                 break
             found.append(hit)
             start_next = hit + 1
         return tuple(found)
 
+    def pprint_around(self, address: int, line_above: int = 8, line_below: int = 8, charset: str = "ANSI") -> None:
+        if type(address) == int:
+            print(f"< Found: at Address: {address:08X} >")
+            lines = line_below + line_above
+            mid: int = int(address - (address % self.handler.bytes_per_line))  # * self.handler.bytes_per_line
+            # print(f"\tMid: {mid:02X}", end='')
+            line_above = mid - line_above * self.handler.bytes_per_line if mid - line_above * self.handler.bytes_per_line > 0 else 0
+            line_below = mid + line_below * self.handler.bytes_per_line if mid + line_below * self.handler.bytes_per_line < self.handler.__len__() else self.handler.__len__()
+            # print(f"\tAbove: {line_above:02X}\tBelow: {line_below:02X}")
+            self.pprint(line_above, line_below, lines, charset)
+
+
+
+            # print()
+        else:
+            pass
+
     def pprint(self, begin: int = None, end: int = None, lines: int = 16, charset: str = "ANSI") -> None:
         # ToDo: Create a buffer/generator, don't print. The User should print himselfe
         begin: int = int(begin) if begin is not None else 0
-        end: int = int(end) if end is not None else len(self)
-        empty: int = 0 if begin == 0 else begin % self.__len__()
+        end: int = int(end) if end != -1 else self.handler.__len__()
+        empty: int = 0 if begin == 0 else begin % self.handler.bytes_per_line
 
         headline: str = "Offset(h) | "
         for i in range(self.handler.bytes_per_line):
@@ -98,11 +118,10 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
         while run:
 
             if printed_lines % lines == 0:
-                print()
                 print(headline)
             # address = start + printed_lines
             next_end: int = last_start + self.handler.bytes_per_line - empty
-            # print("LAST NEXT END: ", last_start, next_end, end)
+            #print("LAST NEXT END: ", last_start, next_end, end)
             print(f"{last_start:08X}  | " + ' ' * 3 * empty, end='')
 
             if next_end < end:
@@ -119,7 +138,10 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
             print("  |  " + " " * empty, end='')
             for char in chars:
                 print(chr(char).translate(PyHexedit.escapes), end='')
-            print()
+            print()  # Just for the Newline
+
+            if printed_lines % lines == lines - 1:  # A line between
+                print()
 
             printed_lines += 1
             last_start = next_end
