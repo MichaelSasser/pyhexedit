@@ -19,19 +19,16 @@
 __author__ = "Michael Sasser"
 __email__ = "Michael@MichaelSasser.de"
 
-
-import logging
-
 from pathlib import Path
-from pyhexedit.filehandler import FileHandler
 
+from pyhexedit.filehandler import FileHandler
 
 __all__ = ['PyHexedit']
 
 
 class PyHexedit(object):  # Don't make this to a child of filehandler.
-    instances = 0
-    escapes = {n: '.' for n in range(1, 32)}
+    instances: int = 0
+    escapes: dict = {n: '.' for n in range(1, 32)}
 
     def __init__(self, file: [Path, str],
                  outputfile: [Path, str] = None,
@@ -44,15 +41,15 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
                  bytes_per_line: int = 16,
                  direct_edit: bool = False) -> None:
         PyHexedit.instances += 1
-        self.handler = FileHandler(file=file,
-                                   outputfile=outputfile,
-                                   editable=editable,
-                                   filetype=filetype,
-                                   bigfile_mode=bigfile_mode,
-                                   auto_bigfile_mode=auto_bigfile_mode,
-                                   encoding=encoding,
-                                   bytes_per_line=bytes_per_line,
-                                   direct_edit=direct_edit)
+        self.handler: FileHandler = FileHandler(file=file,
+                                                outputfile=outputfile,
+                                                editable=editable,
+                                                filetype=filetype,
+                                                bigfile_mode=bigfile_mode,
+                                                auto_bigfile_mode=auto_bigfile_mode,
+                                                encoding=encoding,
+                                                bytes_per_line=bytes_per_line,
+                                                direct_edit=direct_edit)
 
         if auto_open:
             self.open()
@@ -70,55 +67,54 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
         return self.handler.find(value, start, stop)
 
     def find_all(self, value: [str, bytes], start: int = 0, stop: int = -1) -> tuple:
-        eof = stop if stop != -1 else self.__len__()
-        found = []
-        start_next = start
+        eof: int = stop if stop != -1 else self.__len__()
+        found: list = []
+        start_next: int = start
         while True:
             if start_next > eof:
                 break
-            hit = self.find(value, start_next, stop)
+            hit: int = self.find(value, start_next, stop)
             if hit is None:
                 break
             found.append(hit)
             start_next = hit + 1
         return tuple(found)
 
-    def pprint(self, begin:int=None, end:int=None, lines:int=16, charset:str="ANSI"):
+    def pprint(self, begin: int = None, end: int = None, lines: int = 16, charset: str = "ANSI") -> None:
         # ToDo: Create a buffer/generator, don't print. The User should print himselfe
         begin: int = int(begin) if begin is not None else 0
         end: int = int(end) if end is not None else len(self)
         empty: int = 0 if begin == 0 else begin % self.__len__()
 
-        headline = "Offset(h) | "
+        headline: str = "Offset(h) | "
         for i in range(self.handler.bytes_per_line):
             headline += f" {i:02X}"
         headline += f"  |  {charset.center(self.handler.bytes_per_line, ' ')}"
         headline += '\n' + '-' * len(headline)
 
-        printed_lines = 0
-        last_start = begin
-        run = True
+        printed_lines: int = 0
+        last_start: int = begin
+        run: bool = True
         while run:
 
             if printed_lines % lines == 0:
                 print()
                 print(headline)
-            #address = start + printed_lines
-            next_end = last_start + self.handler.bytes_per_line - empty
-            #print("LAST NEXT END: ", last_start, next_end, end)
+            # address = start + printed_lines
+            next_end: int = last_start + self.handler.bytes_per_line - empty
+            # print("LAST NEXT END: ", last_start, next_end, end)
             print(f"{last_start:08X}  | " + ' ' * 3 * empty, end='')
 
             if next_end < end:
-                chars = bytes(self[last_start:next_end])
+                chars: bytes = bytes(self[last_start:next_end])
             elif next_end >= end:
-                chars = bytes(self[last_start:end])
+                chars: bytes = bytes(self[last_start:end])
                 run = False
             else:
-                raise(RuntimeError("This Error should never happen."))
+                raise (RuntimeError("This Error should never happen."))
             for char in chars:
                 print(f" {char:02X}", end='')
             if run == False:
-
                 print(' ' * 3 * (abs(end - last_start - self.handler.bytes_per_line) - empty), end='')
             print("  |  " + " " * empty, end='')
             for char in chars:
@@ -132,19 +128,19 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
     def __getitem__(self, key):
         return self.handler.__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         self.handler.__setitem__(key, value)
 
-    def __del__(self):
+    def __del__(self) -> None:
         PyHexedit.instances -= 1
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return self.handler.__bytes__()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.handler.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.handler.__len__()
 
 

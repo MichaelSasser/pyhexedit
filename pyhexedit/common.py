@@ -16,13 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-__author__ = "Michael Sasser"
-__email__ = "Michael@MichaelSasser.de"
-
+__author__: str = "Michael Sasser"
+__email__: str = "Michael@MichaelSasser.de"
 
 import random
 import string
 
 
-def random_string(length):
+def random_string(length: int) -> str:
     return ''.join(random.choice(string.ascii_lowercase) for i in range(length))

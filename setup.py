@@ -16,10 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
+from setuptools import find_packages, setup
+
+from pyhexedit._version import __version__
 
 __author__ = "Michael Sasser"
 __email__ = "Michael@MichaelSasser.de"
@@ -33,7 +35,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 # Python Packaging and Distributing: https://packaging.python.org/tutorials/distributing-packages/#setup-py
 setup(
     name='pyhexedit',
-    version='0.0.1.dev1',
+    version=__version__,
     description='TODO',
     long_description=long_description,
     url='https://github.com/MichaelSasser/pyhexedit',
@@ -42,7 +44,7 @@ setup(
     license='GPLv3+',
     classifiers=[
         # Look here for all Classifiers: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-        #'Development Status :: 3 - Alpha',
+        # 'Development Status :: 3 - Alpha',
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Science/Research',
         'Environment :: Console',

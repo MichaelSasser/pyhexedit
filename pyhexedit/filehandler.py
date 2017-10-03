@@ -19,17 +19,15 @@
 __author__ = "Michael Sasser"
 __email__ = "Michael@MichaelSasser.de"
 
-
-import os
-import logging
 import gc
+import logging
 import mmap
+import os
+from pathlib import Path
+from shutil import copyfile
 
 from pyhexedit import systeminfo
 from pyhexedit.common import random_string
-from shutil import copyfile
-from pathlib import Path
-
 
 __all__ = ['FileHandler']
 
@@ -39,7 +37,7 @@ class NotEditableError(Exception):
 
 
 class FileHandler(object):
-    instances = 0
+    instances: int = 0
 
     def __init__(self, file: [Path, str],
                  outputfile: [Path, str] = None,
@@ -54,7 +52,8 @@ class FileHandler(object):
         self.instance = FileHandler.instances
 
         # Precheck and cast of file
-        if isinstance(file, Path):  # Must be type(Path()) and not Path
+        self.infile: Path
+        if isinstance(file, Path):  # Must be type(file) = Path and not str
             self.infile = file
         else:
             self.infile = Path(file)
@@ -69,23 +68,23 @@ class FileHandler(object):
             logging.error("The input file doesn't exists. Please specify an existing input file.")
             raise IOError("The input file doesn't exists. Please specify an existing input file.")
 
-        self.__direct_edit = direct_edit
-        self.__editable = editable
-        self.unsaved_changes = False
+        self.__direct_edit: bool = direct_edit
+        self.__editable: bool = editable
+        self.unsaved_changes: bool = False
 
-        self.filetype = filetype
-        self.encoding = encoding
+        self.filetype: str = filetype
+        self.encoding: str = encoding
 
         if outputfile:
             if not isinstance(outputfile, Path):  # Must be type(Path()) and not Path
-                outputfile = Path(outputfile)
+                outputfile: Path = Path(outputfile)
 
-            self.tempfile = outputfile
-            self.__tempfile_is_outputfile = True
-            self.auto_bigfile_mode = False
-            self.__bigfile_mode = True
+            self.tempfile: Path = outputfile
+            self.__tempfile_is_outputfile: bool = True
+            self.auto_bigfile_mode: bool = False
+            self.__bigfile_mode: bool = True
             self.__editable = True
-            self.__direct_edit = False
+            self.__direct_edit: bool = False
         else:
             self.tempfile = self.infile.with_name(
                 self.infile.name + f"_{random_string(4)}_.phe") if self.__editable else None
@@ -95,9 +94,9 @@ class FileHandler(object):
             self.auto_bigfile_mode = auto_bigfile_mode
             logging.debug(f"Auto bigfile mode is: {self.auto_bigfile_mode}")
 
-        self.infile_size = os.path.getsize(self.infile)
+        self.infile_size: int = os.path.getsize(self.infile)
         try:
-            unused_memory = systeminfo.unused_memory()
+            unused_memory: systeminfo.Memory = systeminfo.unused_memory()
         except NotImplementedError as e:
             logging.warning(f"Unused memory check failed: {e}")
             unused_memory = None
@@ -105,7 +104,7 @@ class FileHandler(object):
         if self.auto_bigfile_mode:
             if unused_memory:
                 # 100MB = 800_000_000 Bits
-                self.__bigfile_mode = True if self.infile_size + 800_000_000 > unused_memory else False
+                self.__bigfile_mode = True if unused_memory.free - self.infile_size > unused_memory.total / 10 else False
             else:
                 # 10MB = 80_000_000 Bits
                 self.__bigfile_mode = True if self.infile_size > 80_000_000 else False
@@ -113,14 +112,14 @@ class FileHandler(object):
             if not outputfile:
                 self.__bigfile_mode = bigfile_mode
 
-        logging.debug(f"Bigfile mode is: {self.__bigfile_mode}")
+        logging.debug(f"Bigfile mode is: {bigfile_mode}")
 
-        self.bytes_per_line = bytes_per_line
+        self.bytes_per_line: int = bytes_per_line
 
         self.infile_obj = None
         self.infile_cached = None
 
-    def __op_open(self):
+    def __op_open(self) -> None:
         try:
             if not self.__editable:
                 self.infile_obj = self.infile.open("rb") if not self.__direct_edit else self.infile.open("r+b")
@@ -132,7 +131,7 @@ class FileHandler(object):
                              f"The tempfile is still in \"{self.tempfile.absolute()}\", if it was in use.")
             logging.exception("The input/temp file is not readable. Do you have the right permissions?")
 
-    def open(self):
+    def open(self) -> None:
         # Open the InFile
         if self.infile_obj is not None:
             self.close()
@@ -152,7 +151,7 @@ class FileHandler(object):
             except IOError:
                 logging.exception("The input file is not readable. Do you have the right permissions?")
 
-    def make_editable(self):
+    def make_editable(self) -> None:
         if not self.__editable:
             if self.__bigfile_mode:
                 self.close()
@@ -161,7 +160,7 @@ class FileHandler(object):
             else:
                 self.__editable = True
 
-    def save(self):
+    def save(self) -> None:
         if not self.__editable:
             raise NotEditableError("The file is not editable and can not be saved.")
 
@@ -183,14 +182,14 @@ class FileHandler(object):
         else:
             logging.info("No changes made. Nothing to do...")
 
-    def __op_close(self):
+    def __op_close(self) -> None:
         if self.infile_obj is not None:
             if not self.infile_obj.closed:
                 self.infile_obj.close()
                 while not self.infile_obj.closed:
                     pass  # Wait until file is closed
 
-    def close(self):
+    def close(self) -> None:
         try:
             self.__op_close()
             del self.infile_obj  # Will be reinitialized after gc, just to make sure the object will be deleted properly
@@ -212,16 +211,16 @@ class FileHandler(object):
             value = bytes(value, encoding=self.encoding)
         if self.__bigfile_mode:
             with mmap.mmap(self.infile_obj.fileno(), 0, access=mmap.ACCESS_READ) as memory_map:
-                ret = memory_map.find(value, start, stop)
+                ret: int = memory_map.find(value, start, stop)
         else:
-            ret = self.infile_cached.find(value, start, stop)
+            ret: int = self.infile_cached.find(value, start, stop)
 
         if ret != -1:
             return ret
         else:
             return None
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.__bigfile_mode:
             if not self.infile_obj.closed:  # Warning, the file might be changed after that.
                 self.infile_obj.seek(0, 2)
@@ -231,9 +230,9 @@ class FileHandler(object):
         else:
             return len(self.infile_cached)
 
-    def __getitem__(self, key):  # class slice(start, stop[, step])
+    def __getitem__(self, key: int):  # class slice(start, stop[, step])
         if type(key) == int:
-            key = slice(key, None, None)
+            key: slice = slice(key, None, None)
 
         if self.__bigfile_mode:  # ToDo: Implement stepping
             if key.step:
@@ -254,7 +253,7 @@ class FileHandler(object):
         else:
             return self.infile_cached.__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if type(key) == int:
             key = slice(key, None, None)
 
@@ -268,11 +267,11 @@ class FileHandler(object):
             value: bytes = bytes(value, encoding=self.encoding)
 
         if key.stop:
-            stop = key.stop - key.start
+            stop: int = key.stop - key.start
             if len(value) != stop:  # Fill Mode (works for both bigfile and not bigfile mode)
-                value = (value * round((stop / len(value)) + 0.5))[:(stop)]
+                value: int = (value * round((stop / len(value)) + 0.5))[:(stop)]
         else:
-            stop = len(value)
+            stop: int = len(value)
 
         if self.__bigfile_mode:
             self.infile_obj.seek(key.start, 0)
@@ -282,17 +281,17 @@ class FileHandler(object):
                                  self.infile_cached[(key.start + stop):]  # bytes: just to make sure
         self.unsaved_changes = True
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if self.__bigfile_mode:
             self.infile_obj.seek(0)
             return self.infile_obj.read()
         else:
             return self.infile_cached
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__bytes__().decode(self.encoding))
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
         FileHandler.instances -= 1
 

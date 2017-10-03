@@ -19,16 +19,22 @@
 __author__ = "Michael Sasser"
 __email__ = "Michael@MichaelSasser.de"
 
-
 import platform
+from collections import namedtuple
+
 if platform.system() == 'Windows':
     import ctypes
 
+__all__ = ['Memory', 'unused_memory']
 
-def unused_memory():
+Memory = namedtuple('Memory', ['total', 'free', 'used'])
+
+
+def unused_memory() -> Memory:
     """
-    Get node total memory and memory usage
+    Get total memory and memory usage
     """
+
     if platform.system() == 'Windows':
         class MEMORYSTATUSEX(ctypes.Structure):
             _fields_ = [
@@ -50,21 +56,22 @@ def unused_memory():
         stat = MEMORYSTATUSEX()
         ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
 
-        return stat.ullAvailPhys  # Free physical memory in bits
+        #        return {"free": stat.ullAvailPhys, "used": stat.ullTotalPhys - stat.ullAvailPhys}  # Memory in bits
+        return Memory(stat.ullTotalPhys, stat.ullAvailPhys, stat.ullTotalPhys - stat.ullAvailPhys)  # Memory in bits
 
     try:
         with open('/proc/meminfo', 'r') as mem:
-            ret = {}
-            tmp = 0
+            # ret = {}
+            total: int
+            free = 0
             for i in mem:
                 sline = i.split()
                 if str(sline[0]) == 'MemTotal:':
-                    ret['total'] = int(sline[1])
+                    total = int(sline[1])
                 elif str(sline[0]) in ('MemFree:', 'Buffers:', 'Cached:'):
-                    tmp += int(sline[1])
-            ret['free'] = tmp
-            ret['used'] = int(ret['total']) - int(ret['free'])
-        return ret
+                    free += int(sline[1])
+        return Memory(total, free, total - free)
+        # return ret
     except:
         raise NotImplementedError("I was not able to detect the free physical memory of your OS."
                                   "\"auto_bigfile_mode\" is now using constant values to compensate this issue."
