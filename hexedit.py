@@ -34,7 +34,7 @@ def main(*args, **kwargs):
     parser.add_argument("-o", "--output", help="The output file.", type=str, default=None)
     parser.add_argument("-s", "--start", help="start", default=None)
     parser.add_argument("-e", "--end", help="end", default=None)
-    parser.add_argument("-p", "--pprint", help="pretty-print", action="store_true")
+    parser.add_argument("-r", "--raw", help="raw-print", action="store_true")
     parser.add_argument("-l", "--lines", help="lines to pprint before next headline", type=int, default=16)
     parser.add_argument("-f", "--force", help="Overwrites the output file.", action="store_true")
     parser.add_argument("-E", "--edit", help="Safe edit.", action="store_true")
@@ -53,55 +53,11 @@ def main(*args, **kwargs):
     #print(bytes(he))
     #he[20] = "Hello World"
     #print(bytes(he))
-    #print("Search:", he.find("1", 0, 0x2))
-    start:[int, hex] = args.start if args.start is not None else 0
-    end:[int, hex] = args.end if args.end is not None else len(he)
-    empty:int = 0 if int(start) == 0 else int(start) % int(args.bytes)
+    print("Search:", he.find_all("Test", 0, 0xE0))
 
-    #escapes = ''.join([chr(char) for char in range(1, 32)])
-    escapes = {n: '.' for n in range(1, 32)}
 
-    #temp
-    charset = "ANSI"
-
-    if args.pprint:
-        __headline = "Offset(h) | "
-        for i in range(args.bytes):
-            __headline += f" {i:02X}"
-        __headline += f"  |  {charset.center(args.bytes, ' ')}"
-        __headline += '\n' + '-' * len(__headline)
-
-        printed_lines = 0
-        last_start = start
-        run = True
-        while run:
-
-            if printed_lines % args.lines == 0:
-                print()
-                print(__headline)
-            #address = start + printed_lines
-            next_end = last_start + args.bytes
-            print(f"{last_start:08X}  | " + ' ' * 3 * empty, end='')
-            empty = 0
-            if next_end < end:
-                chars = bytes(he[last_start:next_end])
-            elif next_end >= end:
-                chars = bytes(he[last_start:end])
-                run = False
-            else:
-                raise(RuntimeError("This Error should never happen."))
-            for char in chars:
-                print(f" {char:02X}", end='')
-            if run == False:
-                print(' ' * 3 * abs(int(end) - int(last_start) - args.bytes), end='')
-            print("  |  ", end='')
-            for char in chars:
-                print(chr(char).translate(escapes), end='')
-            print()
-
-            printed_lines += 1
-            last_start = next_end
-
+    if not args.raw:
+        he.pprint(args.start, args.end, args.lines)
 
 if __name__ == '__main__':
     from pyhexedit.colors import colorize

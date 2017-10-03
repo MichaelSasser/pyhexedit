@@ -205,7 +205,7 @@ class FileHandler(object):
         self.infile_obj = None
         self.infile_cached = None
 
-    def find(self, value: [str, bytes], start: int = 0, stop: int = -1):  # ToDo: Also implement regex
+    def find(self, value: [str, bytes], start: int = 0, stop: int = -1) -> [int, None]:  # ToDo: Also implement regex
         if type(value) == str:
             value = bytes(value, encoding=self.encoding)
         if self.__bigfile_mode:
