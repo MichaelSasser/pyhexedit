@@ -104,9 +104,11 @@ class FileHandler(object):
 
         if self.auto_bigfile_mode:
             if unused_memory:
-                self.__bigfile_mode = True if self.infile_size * 16 > unused_memory else False
+                # 100MB = 800_000_000 Bits
+                self.__bigfile_mode = True if self.infile_size + 800_000_000 > unused_memory else False
             else:
-                self.__bigfile_mode = True if self.infile_size > 10_240_000 else False
+                # 10MB = 80_000_000 Bits
+                self.__bigfile_mode = True if self.infile_size > 80_000_000 else False
         else:
             if not outputfile:
                 self.__bigfile_mode = bigfile_mode

@@ -21,6 +21,8 @@ __email__ = "Michael@MichaelSasser.de"
 
 
 import platform
+if platform.system() == 'Windows':
+    import ctypes
 
 
 def unused_memory():
@@ -28,16 +30,43 @@ def unused_memory():
     Get node total memory and memory usage
     """
     if platform.system() == 'Windows':
-        raise NotImplementedError("Collecting free memory information from Microsoft Windows OS is not implemented yet.")
-    with open('/proc/meminfo', 'r') as mem:
-        ret = {}
-        tmp = 0
-        for i in mem:
-            sline = i.split()
-            if str(sline[0]) == 'MemTotal:':
-                ret['total'] = int(sline[1])
-            elif str(sline[0]) in ('MemFree:', 'Buffers:', 'Cached:'):
-                tmp += int(sline[1])
-        ret['free'] = tmp
-        ret['used'] = int(ret['total']) - int(ret['free'])
-    return ret
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+            def __init__(self):
+                self.dwLength = ctypes.sizeof(self)
+                super(MEMORYSTATUSEX, self).__init__()
+
+        stat = MEMORYSTATUSEX()
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+
+        return stat.ullAvailPhys  # Free physical memory in bits
+
+    try:
+        with open('/proc/meminfo', 'r') as mem:
+            ret = {}
+            tmp = 0
+            for i in mem:
+                sline = i.split()
+                if str(sline[0]) == 'MemTotal:':
+                    ret['total'] = int(sline[1])
+                elif str(sline[0]) in ('MemFree:', 'Buffers:', 'Cached:'):
+                    tmp += int(sline[1])
+            ret['free'] = tmp
+            ret['used'] = int(ret['total']) - int(ret['free'])
+        return ret
+    except:
+        raise NotImplementedError("I was not able to detect the free physical memory of your OS."
+                                  "\"auto_bigfile_mode\" is now using constant values to compensate this issue."
+                                  "You can determinate the bigfile_mode by setting \"bigfile_mode: bool\" to True"
+                                  "or to False.")
