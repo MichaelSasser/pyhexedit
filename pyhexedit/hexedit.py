@@ -26,7 +26,7 @@ from pyhexedit.filehandler import FileHandler
 __all__ = ['PyHexedit']
 
 
-class PyHexedit(object):  # Don't make this to a child of filehandler.
+class PyHexedit(object):  # Don't make this to a child of FileHandler.
     instances: int = 0
     escapes: dict = {n: '.' for n in range(1, 32)}
 
@@ -45,11 +45,11 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
                                                 outputfile=outputfile,
                                                 editable=editable,
                                                 filetype=filetype,
-                                                bigfile_mode=bigfile_mode,
-                                                auto_bigfile_mode=auto_bigfile_mode,
+                                                direct_mode=bigfile_mode,
+                                                auto_inram_mode=auto_bigfile_mode,
                                                 encoding=encoding,
                                                 bytes_per_line=bytes_per_line,
-                                                direct_edit=direct_edit)
+                                                infile_edit=direct_edit)
 
         if auto_open:
             self.open()
@@ -83,7 +83,7 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
             start_next = hit + 1
         return tuple(found)
 
-    def pprint_around(self, address: int, line_above: int = 8, line_below: int = 8, charset: str = "ANSI") -> None:
+    def pprint_around(self, address: int, line_above: int = 2, line_below: int = 3, charset: str = "ANSI") -> None:
         if type(address) == int:
             print(f"< Found: at Address: {address:08X} >")
             lines = line_below + line_above
@@ -93,11 +93,8 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
             line_below = mid + line_below * self.handler.bytes_per_line if mid + line_below * self.handler.bytes_per_line < self.handler.__len__() else self.handler.__len__()
             # print(f"\tAbove: {line_above:02X}\tBelow: {line_below:02X}")
             self.pprint(line_above, line_below, lines, charset)
-
-
-
-            # print()
         else:
+            # Todo
             pass
 
     def pprint(self, begin: int = None, end: int = None, lines: int = 16, charset: str = "ANSI") -> None:
@@ -164,9 +161,3 @@ class PyHexedit(object):  # Don't make this to a child of filehandler.
 
     def __len__(self) -> int:
         return self.handler.__len__()
-
-
-if __name__ == '__main__':
-    from pyhexedit.colors import colorize
-
-    colorize()

@@ -33,6 +33,8 @@ Memory = namedtuple('Memory', ['total', 'free', 'used'])
 def unused_memory() -> Memory:
     """
     Get total memory and memory usage
+
+    :return: Memory Object
     """
 
     if platform.system() == 'Windows':
@@ -74,6 +76,6 @@ def unused_memory() -> Memory:
         # return ret
     except:
         raise NotImplementedError("I was not able to detect the free physical memory of your OS."
-                                  "\"auto_bigfile_mode\" is now using constant values to compensate this issue."
+                                  "\"auto_inram_mode\" is now using constant values to compensate this issue."
                                   "You can determinate the bigfile_mode by setting \"bigfile_mode: bool\" to True"
                                   "or to False.")

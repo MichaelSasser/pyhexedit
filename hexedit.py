@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 __author__ = "Michael Sasser"
 __email__ = "Michael@MichaelSasser.de"
 
@@ -23,6 +22,7 @@ __email__ = "Michael@MichaelSasser.de"
 __description__ = "%(prog)s provides you the ability to view, convert, edit and manipulate Binary and Intel Hex files."
 
 from pyhexedit._version import __version__
+from pyhexedit.colors import colorize
 from pyhexedit.hexedit import PyHexedit
 
 
@@ -43,38 +43,38 @@ def main(*args, **kwargs):
     parser.add_argument("-B", "--bytes", help="bytes per line", type=int, default=16)
     parser.add_argument("--bigfile-mode", help="Enables bigfile mode", action="store_true")
     parser.add_argument("--no_auto_bigfile-mode", help="Disables auto bigfile mode", action="store_false")
-
     parser.add_argument("--encoding", help="String encoding. Default: \"utf8\"", type=str, default="utf8")
-
     parser.add_argument("--verbose", help="Verbose display output.", action="store_true")
     parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     args = parser.parse_args()
 
-    he = PyHexedit(args.input, bytes_per_line=args.bytes, outputfile=args.output, encoding=args.encoding,
-                   auto_bigfile_mode=args.no_auto_bigfile_mode, bigfile_mode=args.bigfile_mode, editable=args.edit)
-    # he = PyHexedit(args.input, outputfile=args.output, encoding=args.encoding, auto_bigfile_mode=False, bigfile_mode=True, editable=True)
-    # print(bytes(he))
-    # he[20] = "Hello World"
-    # print(bytes(he))
-    # print("Search:", he.find_all("Test", 0))
+    # Creating an PyHexedit instance
+    hexedit = PyHexedit(args.input,
+                        bytes_per_line=args.bytes,
+                        outputfile=args.output,
+                        encoding=args.encoding,
+                        auto_bigfile_mode=args.no_auto_bigfile_mode,
+                        bigfile_mode=args.bigfile_mode,
+                        editable=args.edit)
+
+    # print(bytes(hexedit))
+    # hexedit[20] = "Hello World"
+    # print(bytes(hexedit))
+    # print("Search:", hexedit.find_all("Test", 0))
 
     if args.search:
         if args.all:
-            found = he.find_all(args.search, args.begin, args.end, not args.raw)
+            found = hexedit.find_all(args.search, args.begin, args.end, not args.raw)
         else:
-            found = he.find(args.search, args.begin, args.end, not args.raw)
+            found = hexedit.find(args.search, args.begin, args.end, not args.raw)
         if args.raw:
             print(found)
         return
 
     if not args.raw:  # Printing should be the last.
-        he.pprint(args.begin, args.end, args.lines)
-
-
+        hexedit.pprint(args.begin, args.end, args.lines)
 
 
 if __name__ == '__main__':
-    from pyhexedit.colors import colorize
-
     colorize()
     main()

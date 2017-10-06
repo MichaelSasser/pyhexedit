@@ -43,11 +43,61 @@ class FileHandler(object):
                  outputfile: [Path, str] = None,
                  editable: bool = False,
                  filetype: str = "bin",
-                 bigfile_mode: bool = True,
-                 auto_bigfile_mode: bool = False,
+                 direct_mode: bool = True,
+                 auto_inram_mode: bool = True,
                  encoding: str = "utf8",
                  bytes_per_line: int = 16,
-                 direct_edit: bool = False) -> None:
+                 infile_edit: bool = False) -> None:
+        """The FileHandler openes, closes and operates exclusively and directly with the file. That means, that no
+        other class or function is dealing with the file. This class is reduced to the basic file operation functions.
+        It also handles the file as like as a variable.
+
+        It operates basicly in two modes:
+
+        * **Direct Mode:**
+          In direct mode the file is opened permanently due to operation. Nothing is
+          cached inside the RAM. This mode is the best option for big files or minimal changes.
+          It is also the default mode.
+          * Read only:
+            Read and seek operations are performed directly in the file. If you want make the file writable later on,
+            just call the make_editable methode.
+          * Read/Write:
+            * With infile edit: Read, write and seek operations are performed directly in the file.
+            * Without infile edit: Read, write and seek operations are performed directly in a copy of the original
+              file. You need enaugh space on the drive for the copy.
+          
+        * **RAM Mode:**
+          In RAM mode the file will be first cached as a string in RAM. All operation will be performed in RAM.
+          After the operations are complete you can save the changes by overwriting the file.
+          * Read only:
+            Read operations are performed in RAM. If you want make the cached file writable later on,
+            just call the make_editable methode.
+          * Read/Write:
+            Read and write operations are performed in the cached file.
+
+        :param file: The file.
+        :type file: str
+        :param outputfile: The outputfile, if the changes should be saved to another file.
+        :type outputfile: str
+        :param editable: Should the file be opened editable? default = False
+        :type editable: bool
+        :param filetype: The type of the file: bin/intel. default = 'bin'
+        :type filetype: str
+        :param direct_mode: Should the file be opened in direct mode? (for big files, not cached in RAM)
+        :type direct_mode: bool
+        :param auto_inram_mode: Should an algorithm choose which mode should be used?
+        :type auto_inram_mode: bool
+        :param encoding: The encoding of the file. default = 'utf8'
+        :type encoding: str
+        :param bytes_per_line: The number of bytes per line.
+        :type bytes_per_line: int
+        :param infile_edit: infile edit for direct mode. If enabled the Read, write and seek operations are
+          performed directly in the file.
+        :type infile_edit: bool
+        :return: None
+        :rtype: None
+        """
+        # ToDo: IntelHex file type
         FileHandler.instances += 1
         self.instance = FileHandler.instances
 
@@ -68,7 +118,7 @@ class FileHandler(object):
             logging.error("The input file doesn't exists. Please specify an existing input file.")
             raise IOError("The input file doesn't exists. Please specify an existing input file.")
 
-        self.__direct_edit: bool = direct_edit
+        self.__direct_edit: bool = infile_edit
         self.__editable: bool = editable
         self.unsaved_changes: bool = False
 
@@ -81,8 +131,8 @@ class FileHandler(object):
 
             self.tempfile: Path = outputfile
             self.__tempfile_is_outputfile: bool = True
-            self.auto_bigfile_mode: bool = False
-            self.__bigfile_mode: bool = True
+            self.auto_inram_mode: bool = True  # Not Needed?
+            self.__direct_mode: bool = True
             self.__editable = True
             self.__direct_edit: bool = False
         else:
@@ -91,8 +141,8 @@ class FileHandler(object):
             self.__tempfile_is_outputfile = False
 
             # Bigfile/auto bigfile
-            self.auto_bigfile_mode = auto_bigfile_mode
-            logging.debug(f"Auto bigfile mode is: {self.auto_bigfile_mode}")
+            self.auto_inram_mode = auto_inram_mode
+            logging.debug(f"Auto bigfile mode is: {self.auto_inram_mode}")
 
         self.infile_size: int = os.path.getsize(self.infile)
         try:
@@ -101,18 +151,18 @@ class FileHandler(object):
             logging.warning(f"Unused memory check failed: {e}")
             unused_memory = None
 
-        if self.auto_bigfile_mode:
+        if self.auto_inram_mode:
             if unused_memory:
                 # 100MB = 800_000_000 Bits
-                self.__bigfile_mode = True if unused_memory.free - self.infile_size > unused_memory.total / 10 else False
+                self.__direct_mode = True if unused_memory.free - self.infile_size > unused_memory.total / 10 else False
             else:
                 # 10MB = 80_000_000 Bits
-                self.__bigfile_mode = True if self.infile_size > 80_000_000 else False
+                self.__direct_mode = True if self.infile_size > 80_000_000 else False
         else:
             if not outputfile:
-                self.__bigfile_mode = bigfile_mode
+                self.__direct_mode = direct_mode
 
-        logging.debug(f"Bigfile mode is: {bigfile_mode}")
+        logging.debug(f"Bigfile mode is: {direct_mode}")
 
         self.bytes_per_line: int = bytes_per_line
 
@@ -135,7 +185,7 @@ class FileHandler(object):
         # Open the InFile
         if self.infile_obj is not None:
             self.close()
-        if self.__bigfile_mode:
+        if self.__direct_mode:
             try:
                 if not self.__editable:
                     self.infile_obj = self.infile.open("rb") if not self.__direct_edit else self.infile.open("r+b")
@@ -152,8 +202,13 @@ class FileHandler(object):
                 logging.exception("The input file is not readable. Do you have the right permissions?")
 
     def make_editable(self) -> None:
+        """The "make_editable()" method makes a file, that is read only editable.
+
+        :return: None
+        :rtype: None
+        """
         if not self.__editable:
-            if self.__bigfile_mode:
+            if self.__direct_mode:
                 self.close()
                 self.__editable = True  # For future use only in this order
                 self.open()
@@ -161,6 +216,11 @@ class FileHandler(object):
                 self.__editable = True
 
     def save(self) -> None:
+        """The "save()" method saves the changes to the file.
+
+        :return: None
+        :rtype: None
+        """
         if not self.__editable:
             raise NotEditableError("The file is not editable and can not be saved.")
 
@@ -173,7 +233,7 @@ class FileHandler(object):
             return
 
         if self.unsaved_changes:
-            if self.__bigfile_mode:
+            if self.__direct_mode:
                 self.__op_close()
                 copyfile(self.tempfile.absolute(), self.infile.absolute())
                 self.__op_open()
@@ -198,7 +258,7 @@ class FileHandler(object):
             return
         finally:
             try:  # Another Try, just for __del__
-                if self.tempfile.exists() and self.__editable and self.__bigfile_mode and not self.__direct_edit and not self.__tempfile_is_outputfile:
+                if self.tempfile.exists() and self.__editable and self.__direct_mode and not self.__direct_edit and not self.__tempfile_is_outputfile:
                     os.remove(self.tempfile.absolute())
             except AttributeError:
                 pass
@@ -207,9 +267,16 @@ class FileHandler(object):
         self.infile_cached = None
 
     def find(self, value: [str, bytes], start: int = 0, stop: int = -1) -> [int, None]:  # ToDo: Also implement regex
+        """The "find" method searches for an occurence of an defined string inside the file.
+
+        :param value: The value to search for.
+        :param start: The start point of the search. default = 0 (begin of the file)
+        :param stop: The stop point of the search. default = -1 (the end of the file)
+        :return: The possition of the occured string
+        """
         if type(value) == str:
             value = bytes(value, encoding=self.encoding)
-        if self.__bigfile_mode:
+        if self.__direct_mode:
             with mmap.mmap(self.infile_obj.fileno(), 0, access=mmap.ACCESS_READ) as memory_map:
                 ret: int = memory_map.find(value, start, stop)
         else:
@@ -221,7 +288,12 @@ class FileHandler(object):
             return None
 
     def __len__(self) -> int:
-        if self.__bigfile_mode:
+        """Returns the length/size of the file.
+
+        :return: The length/size of the file
+        :rtype: None
+        """
+        if self.__direct_mode:
             if not self.infile_obj.closed:  # Warning, the file might be changed after that.
                 self.infile_obj.seek(0, 2)
                 return self.infile_obj.tell()
@@ -234,7 +306,7 @@ class FileHandler(object):
         if type(key) == int:
             key: slice = slice(key, None, None)
 
-        if self.__bigfile_mode:  # ToDo: Implement stepping
+        if self.__direct_mode:  # ToDo: Implement stepping
             if key.step:
                 raise NotImplementedError("Stepping is currently not implemented for Files in bigfile_mode")
 
@@ -273,7 +345,7 @@ class FileHandler(object):
         else:
             stop: int = len(value)
 
-        if self.__bigfile_mode:
+        if self.__direct_mode:
             self.infile_obj.seek(key.start, 0)
             self.infile_obj.write(value)
         else:
@@ -282,7 +354,7 @@ class FileHandler(object):
         self.unsaved_changes = True
 
     def __bytes__(self) -> bytes:
-        if self.__bigfile_mode:
+        if self.__direct_mode:
             self.infile_obj.seek(0)
             return self.infile_obj.read()
         else:
@@ -294,9 +366,3 @@ class FileHandler(object):
     def __del__(self) -> None:
         self.close()
         FileHandler.instances -= 1
-
-
-if __name__ == '__main__':
-    from pyhexedit.colors import colorize
-
-    colorize()

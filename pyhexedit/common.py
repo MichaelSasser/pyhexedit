@@ -24,4 +24,11 @@ import string
 
 
 def random_string(length: int) -> str:
-    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+    """Generates a random string of lowercase ascii characters.
+
+    :param length: Number of characters been generated
+    :type length: int
+    :return: The random string of lowercase ascii characters
+    :rtype: str
+    """
+    return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
